@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Kitchen Pro</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; background: #121212; color: white; padding-bottom: 100px; }
+        #cam-box { width: 100%; height: 50vh; background: #000; position: sticky; top: 0; z-index: 10; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .ui { padding: 15px; }
+        .btn { background: #3498db; color: white; border: none; padding: 15px; width: 100%; border-radius: 8px; font-size: 16px; margin-bottom: 10px; }
+        .scan-item { background: #2c3e50; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .inventory-list { background: #fff; color: #333; margin: 15px; padding: 15px; border-radius: 12px; }
+        .inv-row { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding: 8px 0; }
+        canvas { display: none; }
+        #debug { color: #ff7675; font-size: 12px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="cam-box"><video id="v" autoplay playsinline></video></div>
+
+<div class="ui">
+    <button id="snap" class="btn">📷 Scan Ingredients</button>
+    <div id="debug"></div>
+    <div id="found-items"></div>
+</div>
+
+<div class="inventory-list">
+    <h3 style="margin-top:0">My Pantry List</h3>
+    <div id="pantry-items"></div>
+    <button onclick="clearPantry()" style="font-size:10px; margin-top:10px;">Clear All Data</button>
+</div>
+
+<canvas id="c"></canvas>
+
+<script>
+    const KEY = 'AIzaSyBJNDy2RMhges6gPVtVNjksTpBjg2PLTdc';
+    const v = document.getElementById('v');
+    const c = document.getElementById('c');
+    const pantryBox = document.getElementById('pantry-items');
+
+    // 1. Initialize Camera and Load Saved Data
+    async function start() {
+        renderPantry();
+        try {
+            const s = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+            v.srcObject = s;
+        } catch(e) { document.getElementById('debug').innerText = "Camera Error: " + e.message; }
+    }
+
+    // 2. The Scanner Logic
+    document.getElementById('snap').onclick = async () => {
+        const btn = document.getElementById('snap');
+        btn.innerText = "AI is looking...";
+        btn.disabled = true;
+
+        const ctx = c.getContext('2d');
+        c.width = v.videoWidth; c.height = v.videoHeight;
+        ctx.drawImage(v, 0, 0);
+        const b64 = c.toDataURL('image/jpeg', 0.6).split(',')[1];
+
+        // Line 96 area: Clean Fetch logic
+        try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${KEY}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    contents: [{ parts: [
+                        {text: "List only the food names found in this image. No descriptions. Format: Item1, Item2, Item3"},
+                        {inlineData: {mimeType: "image/jpeg", data: b64}}
+                    ]}]
+                })
+            });
+
+            const data = await res.json();
+            if(data.error) throw new Error(data.error.message);
+            
+            const rawText = data.candidates[0].content.parts[0].text;
+            processResults(rawText);
+        } catch(e) {
+            document.getElementById('debug').innerText = "Line 96 Error: " + e.message;
+        } finally {
+            btn.innerText = "📷 Scan Ingredients";
+            btn.disabled = false;
+        }
+    };
+
+    function processResults(text) {
+        const list = text.split(',').map(i => i.trim());
+        const box = document.getElementById('found-items');
+        box.innerHTML = "<h4>Add to Pantry:</h4>";
+        list.forEach(item => {
+            if(item.length < 2) return;
+            box.innerHTML += `
+                <div class="scan-item">
+                    ${item} 
+                    <button onclick="saveItem('${item}')" style="background:#27ae60; color:#fff; border:none; padding:5px 10px; border-radius:4px;">Add</button>
+                </div>`;
+        });
+    }
+
+    // 3. LocalStorage Memory Functions
+    function saveItem(name) {
+        let pantry = JSON.parse(localStorage.getItem('myPantry') || '[]');
+        pantry.push({name: name, date: new Date().toLocaleDateString()});
+        localStorage.setItem('myPantry', JSON.stringify(pantry));
+        renderPantry();
+        document.getElementById('found-items').innerHTML = ""; // Clear scan list
+    }
+
+    function renderPantry() {
+        let pantry = JSON.parse(localStorage.getItem('myPantry') || '[]');
+        pantryBox.innerHTML = pantry.length ? "" : "No items yet.";
+        pantry.reverse().forEach((item, idx) => {
+            pantryBox.innerHTML += `
+                <div class="inv-row">
+                    <span>${item.name}</span>
+                    <span style="color:#999; font-size:11px;">${item.date}</span>
+                </div>`;
+        });
+    }
+
+    function clearPantry() {
+        if(confirm("Wipe all data?")) {
+            localStorage.removeItem('myPantry');
+            renderPantry();
+        }
+    }
+
+    start();
+</script>
+</body>
+</html>
