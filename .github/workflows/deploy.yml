@@ -15,14 +15,19 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Inject Secret via EnvSubst
-        env:
-          # This pulls your secret into a temporary variable
-          REAL_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Inject Secret Key
         run: |
-          # This is the "Nuclear Option": it force-replaces the placeholder 
-          # using a different tool called envsubst which is more reliable.
-          sed -i "s|window.process?.env?.GEMINI_API_KEY || 'MISSING_KEY'|'${REAL_KEY}'|g" index.html
+          # We use '|' as a delimiter in case your API key contains slashes
+          # This replaces the simple string 'REPLACE_ME_WITH_KEY' in your index.html
+          sed -i "s|REPLACE_ME_WITH_KEY|${{ secrets.GEMINI_API_KEY }}|g" index.html
+          
+          # Verification: This makes the Action fail RED if the text wasn't swapped
+          if grep -q "REPLACE_ME_WITH_KEY" index.html; then
+            echo "Error: The placeholder was not replaced. Check file naming."
+            exit 1
+          else
+            echo "Success: API Key injected into index.html."
+          fi
 
       - name: Upload to GitHub Pages
         uses: actions/upload-pages-artifact@v3
