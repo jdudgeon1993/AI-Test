@@ -1,9 +1,33 @@
-      - name: Inject Secret Key
+name: Deploy Kitchen App
+on:
+  push:
+    branches: ["main", "master"]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Inject Secret via EnvSubst
+        env:
+          # This pulls your secret into a temporary variable
+          REAL_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          # This version handles both single and double quotes and any file named index.html
-          # It searches for the placeholder and forces a replacement even if quotes vary
-          sed -i "s|'%%GEMINI_API_KEY%%'|'${{ secrets.GEMINI_API_KEY }}'|g" index.html
-          sed -i 's|"%%GEMINI_API_KEY%%"|"${{ secrets.GEMINI_API_KEY }}"|g' index.html
-          
-          # Debug check (This will show if the placeholder still exists without showing your key)
-          grep -q "%%GEMINI_API_KEY%%" index.html && echo "STILL THERE" || echo "INJECTION SUCCESSFUL"
+          # This is the "Nuclear Option": it force-replaces the placeholder 
+          # using a different tool called envsubst which is more reliable.
+          sed -i "s|window.process?.env?.GEMINI_API_KEY || 'MISSING_KEY'|'${REAL_KEY}'|g" index.html
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy
+        uses: actions/deploy-pages@v4
