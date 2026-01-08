@@ -10,7 +10,7 @@
         #viewfinder { width: 100%; height: 45vh; background: #000; position: sticky; top: 0; z-index: 10; border-bottom: 3px solid var(--orange); }
         video { width: 100%; height: 100%; object-fit: cover; }
         .controls { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
-        .main-btn { background: var(--orange); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(230,126,34,0.3); }
+        .main-btn { background: var(--orange); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 18px; font-weight: bold; }
         .main-btn:disabled { background: #555; opacity: 0.7; }
         .found-card { background: var(--card); padding: 12px; border-radius: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #3498db; }
         .pantry-container { background: white; color: #333; margin: 15px; padding: 20px; border-radius: 15px; min-height: 200px; }
@@ -39,9 +39,9 @@
 <canvas id="buffer"></canvas>
 
 <script>
-    // GitHub Actions will replace this placeholder with your secret
-    const API_KEY = 'REPLACE_ME_WITH_KEY';
-    const MODEL = 'gemini-1.5-flash'; 
+    // GitHub will replace this specific text during deploy
+    const API_KEY = 'REPLACE_ME_WITH_REAL_KEY'; 
+    const MODEL = 'gemini-3-flash-preview'; 
     
     const video = document.getElementById('webcam');
     const canvas = document.getElementById('buffer');
@@ -58,8 +58,8 @@
 
     document.getElementById('capture-btn').onclick = async () => {
         const btn = document.getElementById('capture-btn');
-        if (API_KEY.includes('%%')) {
-            errLog.innerText = "Error: API Key not injected by GitHub. Check Actions tab.";
+        if (API_KEY === 'REPLACE_ME_WITH_REAL_KEY') {
+            errLog.innerText = "Error: Key not found. Check GitHub Actions logs.";
             return;
         }
         
