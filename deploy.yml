@@ -1,0 +1,30 @@
+name: Deploy Kitchen App
+on:
+  push:
+    branches: ["main"] # Ensure this matches your branch name
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Inject Secret Key
+        run: |
+          # This command swaps the placeholder for your actual secret
+          # Note: If your file name has spaces, use quotes like "Test Features.html"
+          sed -i "s/%%GEMINI_API_KEY%%/${{ secrets.GEMINI_API_KEY }}/g" "Test Features.html"
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy
+        uses: actions/deploy-pages@v4
