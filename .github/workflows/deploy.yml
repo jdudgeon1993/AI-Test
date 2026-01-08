@@ -3,6 +3,11 @@ on:
   push:
     branches: ["main", "master"]
 
+# Prevents multiple deployments from running at the same time
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pages: write
@@ -10,7 +15,6 @@ permissions:
 
 jobs:
   deploy:
-    # This block fixes the "Missing environment" error you saw
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -21,18 +25,16 @@ jobs:
 
       - name: Inject Secret Key
         run: |
-          # Finds the clean text placeholder and swaps it for your GitHub Secret
+          # Replaces the simple string with your GitHub Secret
           sed -i "s|REPLACE_ME_WITH_REAL_KEY|${{ secrets.GEMINI_API_KEY }}|g" index.html
           
-          # Verification check
+          # Fails the run if the injection didn't work
           if grep -q "REPLACE_ME_WITH_REAL_KEY" index.html; then
             echo "Injection failed"
             exit 1
-          else
-            echo "Injection successful"
           fi
 
-      - name: Upload to GitHub Pages
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
