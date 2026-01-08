@@ -3,7 +3,7 @@ on:
   push:
     branches: ["main", "master"]
 
-# Prevents multiple deployments from running at the same time
+# Automatically cancels stuck previous runs to fix the "Multiple Artifacts" error
 concurrency:
   group: "pages"
   cancel-in-progress: true
@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   deploy:
+    # Tells GitHub exactly which environment to use to fix "Missing environment" error
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -25,12 +26,12 @@ jobs:
 
       - name: Inject Secret Key
         run: |
-          # Replaces the simple string with your GitHub Secret
+          # Uses simple text matching to avoid syntax errors
           sed -i "s|REPLACE_ME_WITH_REAL_KEY|${{ secrets.GEMINI_API_KEY }}|g" index.html
           
-          # Fails the run if the injection didn't work
+          # Fails red if the injection failed so you know immediately
           if grep -q "REPLACE_ME_WITH_REAL_KEY" index.html; then
-            echo "Injection failed"
+            echo "Error: Placeholder not replaced."
             exit 1
           fi
 
