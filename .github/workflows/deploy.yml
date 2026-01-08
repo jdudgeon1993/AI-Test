@@ -10,6 +10,10 @@ permissions:
 
 jobs:
   deploy:
+    # This block fixes the "Missing environment" error you saw
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -17,16 +21,15 @@ jobs:
 
       - name: Inject Secret Key
         run: |
-          # We use '|' as a delimiter in case your API key contains slashes
-          # This replaces the simple string 'REPLACE_ME_WITH_KEY' in your index.html
-          sed -i "s|REPLACE_ME_WITH_KEY|${{ secrets.GEMINI_API_KEY }}|g" index.html
+          # Finds the clean text placeholder and swaps it for your GitHub Secret
+          sed -i "s|REPLACE_ME_WITH_REAL_KEY|${{ secrets.GEMINI_API_KEY }}|g" index.html
           
-          # Verification: This makes the Action fail RED if the text wasn't swapped
-          if grep -q "REPLACE_ME_WITH_KEY" index.html; then
-            echo "Error: The placeholder was not replaced. Check file naming."
+          # Verification check
+          if grep -q "REPLACE_ME_WITH_REAL_KEY" index.html; then
+            echo "Injection failed"
             exit 1
           else
-            echo "Success: API Key injected into index.html."
+            echo "Injection successful"
           fi
 
       - name: Upload to GitHub Pages
@@ -34,5 +37,6 @@ jobs:
         with:
           path: '.'
 
-      - name: Deploy
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
