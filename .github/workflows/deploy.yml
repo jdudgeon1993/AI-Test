@@ -1,37 +1,9 @@
-name: Deploy Kitchen App
-on:
-  push:
-    branches: ["main", "master"] # Added master just in case
-
-permissions:
-  contents: write # Allows the script to change the text in your files
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
-jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
       - name: Inject Secret Key
         run: |
-          # This command looks for EVERY .html file and swaps the placeholder
-          find . -name "*.html" -exec sed -i "s/%%GEMINI_API_KEY%%/${{ secrets.GEMINI_API_KEY }}/g" {} +
-
-      - name: Upload to GitHub Pages
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'
-
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+          # This version handles both single and double quotes and any file named index.html
+          # It searches for the placeholder and forces a replacement even if quotes vary
+          sed -i "s|'%%GEMINI_API_KEY%%'|'${{ secrets.GEMINI_API_KEY }}'|g" index.html
+          sed -i 's|"%%GEMINI_API_KEY%%"|"${{ secrets.GEMINI_API_KEY }}"|g' index.html
+          
+          # Debug check (This will show if the placeholder still exists without showing your key)
+          grep -q "%%GEMINI_API_KEY%%" index.html && echo "STILL THERE" || echo "INJECTION SUCCESSFUL"
